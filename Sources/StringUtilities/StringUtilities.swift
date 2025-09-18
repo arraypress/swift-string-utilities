@@ -43,6 +43,9 @@ public struct StringCleaner {
         /// Remove zero-width and non-printable characters
         public static let removeInvisible       = Options(rawValue: 1 << 6)
         
+        /// Convert smart quotes to straight quotes
+        public static let normalizeQuotes       = Options(rawValue: 1 << 7)
+        
         /// Standard cleaning: remove extra spaces and trim
         public static let standard: Options = [.removeExtraSpaces, .trimWhitespace]
         
@@ -53,7 +56,7 @@ public struct StringCleaner {
         /// Complete cleaning: all available operations
         public static let all: Options = [.removeExtraSpaces, .removeEmptyLines, .trimWhitespace,
                                           .normalizeLineBreaks, .fixAllCaps, .removeExtraLineBreaks,
-                                          .removeInvisible]
+                                          .removeInvisible, .normalizeQuotes]
     }
     
     /// Clean text with specified options
@@ -70,6 +73,11 @@ public struct StringCleaner {
             result = result.replacingOccurrences(of: "\u{200C}", with: "") // Zero-width non-joiner
             result = result.replacingOccurrences(of: "\u{200D}", with: "") // Zero-width joiner
             result = result.replacingOccurrences(of: "\u{FEFF}", with: "") // Zero-width no-break space
+        }
+        
+        // Normalize quotes
+        if options.contains(.normalizeQuotes) {
+            result = normalizeQuotes(result)
         }
         
         // Normalize line breaks
@@ -130,6 +138,20 @@ public struct StringCleaner {
     /// - Returns: true if the string contains non-whitespace characters
     public static func isNotEmpty(_ text: String) -> Bool {
         !text.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty
+    }
+    
+    /// Normalize smart quotes to straight quotes
+    /// - Parameter text: The text to normalize
+    /// - Returns: Text with straight quotes
+    public static func normalizeQuotes(_ text: String) -> String {
+        return text
+            .replacingOccurrences(of: "\u{201C}", with: "\"")  // "
+            .replacingOccurrences(of: "\u{201D}", with: "\"")  // "
+            .replacingOccurrences(of: "\u{2018}", with: "'")   // '
+            .replacingOccurrences(of: "\u{2019}", with: "'")   // '
+            .replacingOccurrences(of: "\u{201E}", with: "\"")  // „
+            .replacingOccurrences(of: "\u{00AB}", with: "\"")  // «
+            .replacingOccurrences(of: "\u{00BB}", with: "\"")  // »
     }
 }
 
@@ -259,7 +281,7 @@ public struct ListProcessor {
     /// - Returns: Text with sorted lines
     public static func sortLines(_ text: String, order: SortOrder, removeDuplicates: Bool = false) -> String {
         process(text, separator: "\n", sortOrder: order,
-                options: Options(removeDuplicates: removeDuplicates))
+               options: Options(removeDuplicates: removeDuplicates))
     }
     
     /// Remove duplicate lines from text
@@ -267,6 +289,36 @@ public struct ListProcessor {
     /// - Returns: Text with duplicate lines removed
     public static func deduplicateLines(_ text: String) -> String {
         process(text, separator: "\n", options: Options(removeDuplicates: true))
+    }
+    
+    /// Add numbers to each line (1. 2. 3. etc.)
+    /// - Parameters:
+    ///   - text: The text to process
+    ///   - separator: The separator between items
+    ///   - startIndex: The starting number (defaults to 1)
+    /// - Returns: Text with numbered items
+    public static func numberList(_ text: String, separator: String = "\n", startIndex: Int = 1) -> String {
+        let items = text.components(separatedBy: separator)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        
+        return items.enumerated().map { index, item in
+            "\(index + startIndex). \(item.trimmingCharacters(in: .whitespaces))"
+        }.joined(separator: separator)
+    }
+    
+    /// Add bullet points to each line
+    /// - Parameters:
+    ///   - text: The text to process
+    ///   - bullet: The bullet character to use
+    ///   - separator: The separator between items
+    /// - Returns: Text with bulleted items
+    public static func bulletList(_ text: String, bullet: String = "•", separator: String = "\n") -> String {
+        let items = text.components(separatedBy: separator)
+            .filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty }
+        
+        return items.map { item in
+            "\(bullet) \(item.trimmingCharacters(in: .whitespaces))"
+        }.joined(separator: separator)
     }
 }
 
@@ -507,6 +559,56 @@ public struct TextUtilities {
         text.count
     }
     
+    /// Extract unique words from text
+    /// - Parameters:
+    ///   - text: The text to extract words from
+    ///   - caseSensitive: Whether to preserve case (default: false, converts to lowercase)
+    /// - Returns: Array of unique words sorted alphabetically
+    public static func extractUniqueWords(from text: String, caseSensitive: Bool = false) -> [String] {
+        let words = text.components(separatedBy: .whitespacesAndNewlines)
+            .flatMap { $0.components(separatedBy: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
+            .map { caseSensitive ? $0 : $0.lowercased() }
+        
+        return Array(Set(words)).sorted()
+    }
+    
+    /// Extract all words from text (including duplicates)
+    /// - Parameters:
+    ///   - text: The text to extract words from
+    ///   - caseSensitive: Whether to preserve case
+    /// - Returns: Array of all words in order of appearance
+    public static func extractWords(from text: String, caseSensitive: Bool = false) -> [String] {
+        return text.components(separatedBy: .whitespacesAndNewlines)
+            .flatMap { $0.components(separatedBy: .punctuationCharacters) }
+            .filter { !$0.isEmpty }
+            .map { caseSensitive ? $0 : $0.lowercased() }
+    }
+    
+    /// Replace text between two delimiters
+    /// - Parameters:
+    ///   - text: The text to process
+    ///   - startDelimiter: The starting delimiter
+    ///   - endDelimiter: The ending delimiter
+    ///   - replacement: The replacement text
+    /// - Returns: Text with content between delimiters replaced, or nil if delimiters not found
+    public static func replaceBetween(
+        in text: String,
+        start startDelimiter: String,
+        end endDelimiter: String,
+        with replacement: String
+    ) -> String? {
+        guard let startRange = text.range(of: startDelimiter),
+              let endRange = text.range(of: endDelimiter, range: startRange.upperBound..<text.endIndex) else {
+            return nil
+        }
+        
+        var result = text
+        let replaceRange = startRange.upperBound..<endRange.lowerBound
+        result.replaceSubrange(replaceRange, with: replacement)
+        return result
+    }
+    
     /// Reverse text
     /// - Parameter text: The text to reverse
     /// - Returns: Reversed text
@@ -568,6 +670,7 @@ public struct TextUtilities {
         }
         return text
     }
+    
 }
 
 // MARK: - Convenience String Extension
@@ -594,11 +697,30 @@ public extension String {
         ListProcessor.deduplicateLines(self)
     }
     
+    /// Add numbers to each line
+    /// - Parameter startIndex: Starting number (default: 1)
+    /// - Returns: Text with numbered lines
+    func numberedList(startIndex: Int = 1) -> String {
+        ListProcessor.numberList(self, startIndex: startIndex)
+    }
+    
+    /// Add bullet points to each line
+    /// - Parameter bullet: Bullet character (default: "•")
+    /// - Returns: Text with bulleted lines
+    func bulletedList(bullet: String = "•") -> String {
+        ListProcessor.bulletList(self, bullet: bullet)
+    }
+    
     /// Transform text case
     /// - Parameter style: Case style to apply
     /// - Returns: Transformed text
     func transformed(to style: TextTransform.CaseStyle) -> String {
         TextTransform.transform(self, to: style)
+    }
+    
+    /// Normalize smart quotes to straight quotes
+    var quotesNormalized: String {
+        StringCleaner.normalizeQuotes(self)
     }
     
     /// Get word count
@@ -614,6 +736,16 @@ public extension String {
     /// Get character count
     var characterCount: Int {
         TextUtilities.characterCount(of: self)
+    }
+    
+    /// Extract unique words
+    var uniqueWords: [String] {
+        TextUtilities.extractUniqueWords(from: self)
+    }
+    
+    /// Extract all words
+    var words: [String] {
+        TextUtilities.extractWords(from: self)
     }
     
     /// Reverse the string
@@ -643,6 +775,16 @@ public extension String {
     /// Escape for CSV
     var csvEscaped: String {
         TextUtilities.escapeCSV(self)
+    }
+    
+    /// Replace text between delimiters
+    /// - Parameters:
+    ///   - startDelimiter: Starting delimiter
+    ///   - endDelimiter: Ending delimiter
+    ///   - replacement: Replacement text
+    /// - Returns: Modified string or nil if delimiters not found
+    func replacingBetween(start: String, end: String, with replacement: String) -> String? {
+        TextUtilities.replaceBetween(in: self, start: start, end: end, with: replacement)
     }
     
 }

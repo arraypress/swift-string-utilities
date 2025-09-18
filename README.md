@@ -4,10 +4,12 @@ A comprehensive Swift package for string manipulation, text cleaning, list proce
 
 ## Features
 
-- 🧹 **Text Cleaning** - Remove extra spaces, fix formatting, normalize line breaks
-- 📝 **List Operations** - Sort, deduplicate, and process lists with various options
+- 🧹 **Text Cleaning** - Remove extra spaces, fix formatting, normalize line breaks, smart quotes
+- 📝 **List Operations** - Sort, deduplicate, format with numbers/bullets
 - 🔤 **Case Transformations** - Convert between camelCase, snake_case, PascalCase, and more
+- 📊 **Text Analysis** - Extract words, count occurrences, analyze content
 - 🛠 **Text Utilities** - Word counting, text wrapping, truncation, CSV escaping
+- 🔄 **Template Processing** - Replace content between delimiters
 - 🚀 **Type-Safe API** - Leverage Swift's type system with enums and option sets
 - 📦 **Zero Dependencies** - Pure Swift implementation, no external dependencies
 
@@ -42,11 +44,16 @@ let messyText = "Hello    World!\n\n\n\nThis   has  extra   spaces."
 // Standard cleaning (remove extra spaces + trim)
 let cleaned = messyText.cleaned()
 
+// Normalize smart quotes
+let quoted = ""Hello" and 'world'"
+let normalized = quoted.quotesNormalized  // "Hello" and 'world'
+
 // Custom cleaning options
 let aggressive = messyText.cleaned(options: [
     .removeExtraSpaces,
     .removeEmptyLines,
     .normalizeLineBreaks,
+    .normalizeQuotes,
     .trimWhitespace
 ])
 
@@ -59,9 +66,9 @@ if messyText.isNotEmpty {
 }
 ```
 
-### List Processing
+### List Processing & Formatting
 
-Sort and manipulate lists with powerful options:
+Sort, manipulate, and format lists:
 
 ```swift
 let list = """
@@ -80,23 +87,34 @@ let sorted = list.sortedLines(.ascending)
 let unique = list.deduplicatedLines()
 // Result: apple, Banana, cherry, Date
 
+// Add numbers to list items
+let numbered = list.numberedList()
+// Result:
+// 1. apple
+// 2. Banana
+// 3. cherry
+// 4. Date
+
+// Add bullets to list items
+let bulleted = list.bulletedList()
+// Result:
+// • apple
+// • Banana
+// • cherry
+// • Date
+
+// Custom bullet style
+let custom = list.bulletedList(bullet: "→")
+// Result:
+// → apple
+// → Banana
+// → cherry
+// → Date
+
 // Natural sort (handles numbers properly)
 let items = "item10\nitem2\nitem1"
 let natural = items.sortedLines(.natural)
 // Result: item1, item2, item10
-
-// Process with multiple options
-let processed = ListProcessor.process(
-    list,
-    separator: "\n",
-    sortOrder: .ascending,
-    options: ListProcessor.Options(
-        removeDuplicates: true,
-        removeEmpty: true,
-        trimItems: true,
-        caseSensitive: false
-    )
-)
 ```
 
 ### Case Transformations
@@ -125,17 +143,55 @@ text.transformed(to: .pathCase)       // "hello/world/example"
 text.transformed(to: .alternating)    // "hElLo WoRlD eXaMpLe"
 ```
 
+### Text Analysis
+
+Extract and analyze text content:
+
+```swift
+let text = "The quick brown fox jumps over the lazy fox."
+
+// Extract unique words
+let unique = text.uniqueWords
+// Result: ["brown", "fox", "jumps", "lazy", "over", "quick", "the"]
+
+// Extract all words (including duplicates)
+let allWords = text.words
+// Result: ["the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "fox"]
+
+// Count specific occurrences
+let count = TextUtilities.count(of: "fox", in: text)  // 2
+
+// Word, line, and character counts
+text.wordCount        // 9
+text.lineCount        // 1
+text.characterCount   // 44
+```
+
+### Template Processing
+
+Replace content between delimiters:
+
+```swift
+let template = "Hello [NAME], welcome to [PLACE]!"
+
+// Replace placeholders
+if let result = template.replacingBetween(start: "[", end: "]", with: "David") {
+    print(result)  // "Hello [David], welcome to [PLACE]!"
+}
+
+// More complex example
+let html = "<title>Old Title</title>"
+if let updated = html.replacingBetween(start: "<title>", end: "</title>", with: "New Title") {
+    print(updated)  // "<title>New Title</title>"
+}
+```
+
 ### Text Utilities
 
 Various utility functions for text manipulation:
 
 ```swift
 let text = "The quick brown fox jumps over the lazy dog."
-
-// Counting
-text.wordCount        // 9
-text.lineCount        // 1
-text.characterCount   // 44
 
 // Text manipulation
 text.reversed         // ".god yzal eht revo spmuj xof nworb kciuq ehT"
@@ -153,9 +209,6 @@ let wrapped = longText.wrapped(at: 20)
 // CSV escaping
 let csvField = "Hello, \"World\""
 let escaped = csvField.csvEscaped  // "\"Hello, \"\"World\"\"\""
-
-// Count occurrences
-let count = TextUtilities.count(of: "the", in: text, caseSensitive: false)  // 2
 ```
 
 ## API Reference
@@ -170,6 +223,7 @@ let count = TextUtilities.count(of: "the", in: text, caseSensitive: false)  // 2
 - `.fixAllCaps` - Convert ALL CAPS to Capitalized Case
 - `.removeExtraLineBreaks` - Replace multiple line breaks with double line break
 - `.removeInvisible` - Remove zero-width and non-printable characters
+- `.normalizeQuotes` - Convert smart quotes to straight quotes
 
 #### Preset Options
 - `.standard` - Basic cleaning (extra spaces + trim)
@@ -185,6 +239,10 @@ let count = TextUtilities.count(of: "the", in: text, caseSensitive: false)  // 2
 - `.byLengthDescending` - Longest to shortest
 - `.natural` - Natural sort (handles numbers properly)
 - `.random` - Random shuffle
+
+#### List Formatting
+- `numberList(_:separator:startIndex:)` - Add numbers to list items
+- `bulletList(_:bullet:separator:)` - Add bullets to list items
 
 #### Processing Options
 - `removeDuplicates` - Remove duplicate items
@@ -214,6 +272,9 @@ let count = TextUtilities.count(of: "the", in: text, caseSensitive: false)  // 2
 
 Static utility methods for text analysis and manipulation:
 - `count(of:in:caseSensitive:)` - Count substring occurrences
+- `extractUniqueWords(from:caseSensitive:)` - Get unique words from text
+- `extractWords(from:caseSensitive:)` - Get all words from text
+- `replaceBetween(in:start:end:with:)` - Replace text between delimiters
 - `wordCount(of:)` - Count words
 - `lineCount(of:)` - Count lines
 - `characterCount(of:)` - Count characters
@@ -230,13 +291,20 @@ All major functionality is available as convenient String extensions:
 ```swift
 // Cleaning
 text.cleaned(options: .standard)
+text.quotesNormalized
 
 // List operations
 text.sortedLines(.natural)
 text.deduplicatedLines()
+text.numberedList()
+text.bulletedList()
 
 // Transformations
 text.transformed(to: .camelCase)
+
+// Text analysis
+text.uniqueWords
+text.words
 
 // Properties
 text.wordCount
@@ -249,6 +317,7 @@ text.isNotEmpty
 text.truncated(to: 100)
 text.wrapped(at: 80)
 text.csvEscaped
+text.replacingBetween(start: "[", end: "]", with: "content")
 ```
 
 ## Performance

@@ -407,4 +407,152 @@ final class SwiftStringUtilitiesTests: XCTestCase {
         let expected = "apple\nBANANA\ncherry\nzebra"
         XCTAssertEqual(result, expected)
     }
+    
+    // MARK: - New Method Tests
+
+    func testNormalizeQuotes() {
+        // Test smart quotes normalization
+        let input = "\u{201C}Hello\u{201D} and \u{2018}world\u{2019}"
+        let expected = "\"Hello\" and 'world'"
+        XCTAssertEqual(StringCleaner.normalizeQuotes(input), expected)
+        
+        // Test other quote types
+        let input2 = "\u{201E}German\u{00AB}French\u{00BB}"
+        let expected2 = "\"German\"French\""
+        XCTAssertEqual(StringCleaner.normalizeQuotes(input2), expected2)
+        
+        // Test as cleaning option
+        let input3 = "\u{201C}Test\u{201D}"
+        let result = StringCleaner.clean(input3, options: .normalizeQuotes)
+        XCTAssertEqual(result, "\"Test\"")
+        
+        // Test string extension
+        XCTAssertEqual(input.quotesNormalized, expected)
+    }
+
+    func testNumberList() {
+        let input = "Apple\nBanana\nCherry"
+        let expected = "1. Apple\n2. Banana\n3. Cherry"
+        XCTAssertEqual(ListProcessor.numberList(input), expected)
+        
+        // Test with custom start index
+        let expected2 = "5. Apple\n6. Banana\n7. Cherry"
+        XCTAssertEqual(ListProcessor.numberList(input, startIndex: 5), expected2)
+        
+        // Test with empty lines (should be filtered)
+        let input2 = "Apple\n\nBanana\n  \nCherry"
+        XCTAssertEqual(ListProcessor.numberList(input2), expected)
+        
+        // Test string extension
+        XCTAssertEqual(input.numberedList(), expected)
+        XCTAssertEqual(input.numberedList(startIndex: 3), "3. Apple\n4. Banana\n5. Cherry")
+    }
+
+    func testBulletList() {
+        let input = "Apple\nBanana\nCherry"
+        let expected = "• Apple\n• Banana\n• Cherry"
+        XCTAssertEqual(ListProcessor.bulletList(input), expected)
+        
+        // Test with custom bullet
+        let expected2 = "- Apple\n- Banana\n- Cherry"
+        XCTAssertEqual(ListProcessor.bulletList(input, bullet: "-"), expected2)
+        
+        // Test with empty lines (should be filtered)
+        let input2 = "Apple\n\nBanana\n  \nCherry"
+        XCTAssertEqual(ListProcessor.bulletList(input2), expected)
+        
+        // Test string extension
+        XCTAssertEqual(input.bulletedList(), expected)
+        XCTAssertEqual(input.bulletedList(bullet: "→"), "→ Apple\n→ Banana\n→ Cherry")
+    }
+
+    func testExtractUniqueWords() {
+        let input = "The quick brown fox jumps over the lazy fox"
+        let expected = ["brown", "fox", "jumps", "lazy", "over", "quick", "the"]
+        XCTAssertEqual(TextUtilities.extractUniqueWords(from: input), expected)
+        
+        // Test with punctuation
+        let input2 = "Hello, world! How are you? Hello again."
+        let expected2 = ["again", "are", "hello", "how", "world", "you"]
+        XCTAssertEqual(TextUtilities.extractUniqueWords(from: input2), expected2)
+        
+        // Test case sensitive
+        let input3 = "The Quick Brown Fox"
+        let expectedCaseSensitive = ["Brown", "Fox", "Quick", "The"]
+        XCTAssertEqual(TextUtilities.extractUniqueWords(from: input3, caseSensitive: true), expectedCaseSensitive)
+        
+        // Test string extension
+        XCTAssertEqual(input.uniqueWords, expected)
+    }
+
+    func testExtractWords() {
+        let input = "The quick brown fox jumps over the lazy fox"
+        let words = TextUtilities.extractWords(from: input)
+        XCTAssertEqual(words.count, 9)
+        XCTAssertEqual(words[0], "the")
+        XCTAssertEqual(words[8], "fox")
+        
+        // Test that duplicates are preserved
+        XCTAssertEqual(words.filter { $0 == "fox" }.count, 2)
+        XCTAssertEqual(words.filter { $0 == "the" }.count, 2)
+        
+        // Test string extension
+        XCTAssertEqual(input.words.count, 9)
+    }
+
+    func testReplaceBetween() {
+        let input = "Hello [PLACEHOLDER] world"
+        let result = TextUtilities.replaceBetween(in: input, start: "[", end: "]", with: "beautiful")
+        XCTAssertEqual(result, "Hello [beautiful] world")
+        
+        // Test with multiple occurrences (should only replace first)
+        let input2 = "Start <tag>content</tag> and <tag>more</tag>"
+        let result2 = TextUtilities.replaceBetween(in: input2, start: "<tag>", end: "</tag>", with: "REPLACED")
+        XCTAssertEqual(result2, "Start <tag>REPLACED</tag> and <tag>more</tag>")
+        
+        // Test when delimiters not found
+        let input3 = "No delimiters here"
+        let result3 = TextUtilities.replaceBetween(in: input3, start: "[", end: "]", with: "test")
+        XCTAssertNil(result3)
+        
+        // Test string extension
+        let replaced = input.replacingBetween(start: "[", end: "]", with: "amazing")
+        XCTAssertEqual(replaced, "Hello [amazing] world")
+    }
+
+    func testExtractWordsWithPunctuation() {
+        let input = "Hello, world! How's it going? Test-case here."
+        let words = TextUtilities.extractWords(from: input)
+        
+        // Should split on punctuation
+        XCTAssertTrue(words.contains("hello"))
+        XCTAssertTrue(words.contains("world"))
+        XCTAssertTrue(words.contains("how"))
+        XCTAssertTrue(words.contains("s"))  // from "How's"
+        XCTAssertTrue(words.contains("test"))
+        XCTAssertTrue(words.contains("case"))  // split on hyphen
+    }
+
+    func testListFormattingWithWhitespace() {
+        // Test that whitespace is properly trimmed in list operations
+        let input = "  Apple  \n  Banana  \n  Cherry  "
+        
+        let numbered = ListProcessor.numberList(input)
+        XCTAssertEqual(numbered, "1. Apple\n2. Banana\n3. Cherry")
+        
+        let bulleted = ListProcessor.bulletList(input)
+        XCTAssertEqual(bulleted, "• Apple\n• Banana\n• Cherry")
+    }
+
+    func testEmptyInputHandling() {
+        // Test all new methods handle empty input gracefully
+        let empty = ""
+        
+        XCTAssertEqual(StringCleaner.normalizeQuotes(empty), "")
+        XCTAssertEqual(ListProcessor.numberList(empty), "")
+        XCTAssertEqual(ListProcessor.bulletList(empty), "")
+        XCTAssertEqual(TextUtilities.extractUniqueWords(from: empty), [])
+        XCTAssertEqual(TextUtilities.extractWords(from: empty), [])
+        XCTAssertNil(TextUtilities.replaceBetween(in: empty, start: "[", end: "]", with: "test"))
+    }
 }
