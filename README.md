@@ -1,23 +1,29 @@
-# SwiftStringUtilities
+# Swift String Utilities
 
-A comprehensive Swift package for string manipulation, text cleaning, list processing, and case transformations. Zero dependencies, pure Swift implementation.
+A comprehensive Swift package for string manipulation — text cleaning, list processing, case transformations, and text analysis — with ergonomic `String` extensions. Pure Swift, zero dependencies.
 
 ## Features
 
-- 🧹 **Text Cleaning** - Remove extra spaces, fix formatting, normalize line breaks, smart quotes
-- 📝 **List Operations** - Sort, deduplicate, format with numbers/bullets
-- 🔤 **Case Transformations** - Convert between camelCase, snake_case, PascalCase, and more
-- 📊 **Text Analysis** - Extract words, count occurrences, analyze content
-- 🛠 **Text Utilities** - Word counting, text wrapping, truncation, CSV escaping
-- 🔄 **Template Processing** - Replace content between delimiters
-- 🚀 **Type-Safe API** - Leverage Swift's type system with enums and option sets
-- 📦 **Zero Dependencies** - Pure Swift implementation, no external dependencies
+- 🧹 **Text cleaning** — `StringCleaner` collapses extra spaces, trims whitespace, normalizes line breaks and smart quotes, strips invisible characters, and fixes ALL-CAPS words via composable `OptionSet` flags
+- 📋 **List processing** — `ListProcessor` splits, trims, deduplicates, and sorts lists (ascending, descending, by length, natural, random)
+- 🔢 **List formatting** — number or bullet any list with one call
+- 🔤 **Case transforms** — `TextTransform` converts to camelCase, PascalCase, snake_case, kebab-case, CONSTANT_CASE, dot.case, path/case, sentence, and aLtErNaTiNg case
+- 📊 **Text analysis** — word/line/character counts, unique-word extraction, and substring counting
+- ✂️ **Text manipulation** — truncate with ellipsis, word-wrap at a width, reverse, strip all whitespace, and replace text between delimiters
+- 📄 **CSV-safe escaping** — quote and escape fields for CSV output
+- 🍏 **String extensions** — call everything fluently: `.cleaned()`, `.sortedLines()`, `.transformed(to:)`, `.wordCount`, `.truncated(to:)`, and more
+- 🪶 **Zero dependencies** — Foundation only
+- 🍎 **Cross-platform** — iOS, macOS, tvOS, watchOS, visionOS
+
+## Requirements
+
+- iOS 13.0+ / macOS 10.15+ / tvOS 13.0+ / watchOS 6.0+ / visionOS 1.0+
+- Swift 5.9+
+- Xcode 15.0+
 
 ## Installation
 
 ### Swift Package Manager
-
-Add to your `Package.swift`:
 
 ```swift
 dependencies: [
@@ -25,331 +31,110 @@ dependencies: [
 ]
 ```
 
-Or in Xcode:
-1. File → Add Package Dependencies
-2. Enter the repository URL
-3. Select version requirements
-
 ## Usage
 
-### Text Cleaning
-
-Clean messy text with various options:
+### Cleaning Text
 
 ```swift
-import SwiftStringUtilities
+import StringUtilities
 
-let messyText = "Hello    World!\n\n\n\nThis   has  extra   spaces."
+let messy = "  Hello   WORLD!!  \n\n\n  Extra   spaces  "
+let clean = StringCleaner.clean(messy, options: .aggressive)
 
-// Standard cleaning (remove extra spaces + trim)
-let cleaned = messyText.cleaned()
+// Or fluently, with the default .standard options
+let trimmed = messy.cleaned()
 
-// Normalize smart quotes
-let quoted = ""Hello" and 'world'"
-let normalized = quoted.quotesNormalized  // "Hello" and 'world'
-
-// Custom cleaning options
-let aggressive = messyText.cleaned(options: [
-    .removeExtraSpaces,
-    .removeEmptyLines,
-    .normalizeLineBreaks,
-    .normalizeQuotes,
-    .trimWhitespace
-])
-
-// Using the static method
-let result = StringCleaner.clean(messyText, options: .aggressive)
-
-// Check if string is not empty after trimming
-if messyText.isNotEmpty {
-    // Process the text
-}
+// Compose your own flags
+let custom = messy.cleaned(options: [.removeExtraSpaces, .normalizeQuotes, .trimWhitespace])
 ```
 
-### List Processing & Formatting
+Available presets: `.standard`, `.aggressive`, `.all` — or build from individual flags like `.removeExtraSpaces`, `.removeEmptyLines`, `.trimWhitespace`, `.normalizeLineBreaks`, `.fixAllCaps`, `.removeExtraLineBreaks`, `.removeInvisible`, `.normalizeQuotes`.
 
-Sort, manipulate, and format lists:
+### Processing Lists
 
 ```swift
-let list = """
-apple
-Banana
-apple
-cherry
-Date
-"""
+import StringUtilities
 
-// Sort alphabetically
-let sorted = list.sortedLines(.ascending)
-// Result: apple, apple, Banana, cherry, Date
+let list = "Banana\nApple\napple\nCherry"
 
-// Remove duplicates
-let unique = list.deduplicatedLines()
-// Result: apple, Banana, cherry, Date
+// Sort, dedupe (case-insensitive), trim — in one call
+let sorted = ListProcessor.process(
+    list,
+    sortOrder: .ascending,
+    options: .init(removeDuplicates: true)
+)
 
-// Add numbers to list items
-let numbered = list.numberedList()
-// Result:
-// 1. apple
-// 2. Banana
-// 3. cherry
-// 4. Date
-
-// Add bullets to list items
-let bulleted = list.bulletedList()
-// Result:
-// • apple
-// • Banana
-// • cherry
-// • Date
-
-// Custom bullet style
-let custom = list.bulletedList(bullet: "→")
-// Result:
-// → apple
-// → Banana
-// → cherry
-// → Date
-
-// Natural sort (handles numbers properly)
-let items = "item10\nitem2\nitem1"
-let natural = items.sortedLines(.natural)
-// Result: item1, item2, item10
+// Convenience helpers
+let deduped = list.deduplicatedLines()
+let numbered = "First\nSecond\nThird".numberedList()      // "1. First\n2. Second\n..."
+let bulleted = "First\nSecond".bulletedList(bullet: "-")  // "- First\n- Second"
+let natural  = "item10\nitem2\nitem1".sortedLines(.natural)
 ```
 
-### Case Transformations
-
-Transform text between different case styles:
+### Transforming Case
 
 ```swift
-let text = "hello world example"
+import StringUtilities
 
-// Basic transformations
-text.transformed(to: .uppercase)      // "HELLO WORLD EXAMPLE"
-text.transformed(to: .lowercase)      // "hello world example"
-text.transformed(to: .capitalized)    // "Hello World Example"
-text.transformed(to: .sentence)       // "Hello world example"
+TextTransform.transform("hello world", to: .snakeCase)     // "hello_world"
+TextTransform.transform("hello world", to: .camelCase)     // "helloWorld"
+TextTransform.transform("HelloWorld",  to: .kebabCase)     // "hello-world"
 
-// Programming case styles
-text.transformed(to: .camelCase)      // "helloWorldExample"
-text.transformed(to: .pascalCase)     // "HelloWorldExample"
-text.transformed(to: .snakeCase)      // "hello_world_example"
-text.transformed(to: .kebabCase)      // "hello-world-example"
-text.transformed(to: .constantCase)   // "HELLO_WORLD_EXAMPLE"
-text.transformed(to: .dotCase)        // "hello.world.example"
-text.transformed(to: .pathCase)       // "hello/world/example"
-
-// Fun transformation
-text.transformed(to: .alternating)    // "hElLo WoRlD eXaMpLe"
+// Fluently
+"my variable name".transformed(to: .pascalCase)            // "MyVariableName"
+"some_constant".transformed(to: .constantCase)             // "SOME_CONSTANT"
 ```
 
-### Text Analysis
-
-Extract and analyze text content:
+### Analyzing Text
 
 ```swift
-let text = "The quick brown fox jumps over the lazy fox."
+import StringUtilities
 
-// Extract unique words
-let unique = text.uniqueWords
-// Result: ["brown", "fox", "jumps", "lazy", "over", "quick", "the"]
+let text = "The quick brown fox. The lazy dog."
 
-// Extract all words (including duplicates)
-let allWords = text.words
-// Result: ["the", "quick", "brown", "fox", "jumps", "over", "the", "lazy", "fox"]
-
-// Count specific occurrences
-let count = TextUtilities.count(of: "fox", in: text)  // 2
-
-// Word, line, and character counts
-text.wordCount        // 9
-text.lineCount        // 1
-text.characterCount   // 44
+text.wordCount                                    // 8
+text.lineCount                                    // 1
+text.characterCount                               // 34
+text.uniqueWords                                  // sorted, lowercased
+TextUtilities.count(of: "the", in: text, caseSensitive: false)  // 2
 ```
 
-### Template Processing
-
-Replace content between delimiters:
+### Manipulating Text
 
 ```swift
-let template = "Hello [NAME], welcome to [PLACE]!"
+import StringUtilities
 
-// Replace placeholders
-if let result = template.replacingBetween(start: "[", end: "]", with: "David") {
-    print(result)  // "Hello [David], welcome to [PLACE]!"
-}
+"A long sentence here".truncated(to: 10)          // "A long..."
+"one two three four five".wrapped(at: 12)         // wraps to 12-col lines
+"hello".reversed                                  // "olleh"
+"name,with,commas".csvEscaped                     // "\"name,with,commas\""
 
-// More complex example
-let html = "<title>Old Title</title>"
-if let updated = html.replacingBetween(start: "<title>", end: "</title>", with: "New Title") {
-    print(updated)  // "<title>New Title</title>"
-}
+// Replace content between delimiters
+"Hello [name]!".replacingBetween(start: "[", end: "]", with: "World")  // "Hello [World]!"
 ```
 
-### Text Utilities
+## Models
 
-Various utility functions for text manipulation:
+| Type | Purpose |
+|------|---------|
+| `StringCleaner` | Text cleaning and normalization (`clean`, `normalizeQuotes`, `isNotEmpty`) with `StringCleaner.Options` flags |
+| `ListProcessor` | List splitting, dedup, sorting, numbering, and bulleting; `SortOrder` and `Options` |
+| `TextTransform` | Case transformations via `CaseStyle` |
+| `TextUtilities` | Counting, extraction, truncation, wrapping, CSV escaping, delimiter replacement |
+| `String` extension | Fluent wrappers for all of the above |
 
-```swift
-let text = "The quick brown fox jumps over the lazy dog."
+## Testing
 
-// Text manipulation
-text.reversed         // ".god yzal eht revo spmuj xof nworb kciuq ehT"
-text.truncated(to: 20) // "The quick brown f..."
-
-// Text wrapping
-let longText = "This is a very long line that needs to be wrapped at a specific width."
-let wrapped = longText.wrapped(at: 20)
-// Result:
-// "This is a very long
-//  line that needs to
-//  be wrapped at a
-//  specific width."
-
-// CSV escaping
-let csvField = "Hello, \"World\""
-let escaped = csvField.csvEscaped  // "\"Hello, \"\"World\"\"\""
+```bash
+swift test
 ```
 
-## API Reference
-
-### StringCleaner
-
-#### Cleaning Options
-- `.removeExtraSpaces` - Remove multiple consecutive spaces and tabs
-- `.removeEmptyLines` - Remove lines containing only whitespace
-- `.trimWhitespace` - Remove leading and trailing whitespace
-- `.normalizeLineBreaks` - Convert all line breaks to \n
-- `.fixAllCaps` - Convert ALL CAPS to Capitalized Case
-- `.removeExtraLineBreaks` - Replace multiple line breaks with double line break
-- `.removeInvisible` - Remove zero-width and non-printable characters
-- `.normalizeQuotes` - Convert smart quotes to straight quotes
-
-#### Preset Options
-- `.standard` - Basic cleaning (extra spaces + trim)
-- `.aggressive` - Common cleaning operations
-- `.all` - Apply all cleaning operations
-
-### ListProcessor
-
-#### Sort Orders
-- `.ascending` - A to Z
-- `.descending` - Z to A
-- `.byLength` - Shortest to longest
-- `.byLengthDescending` - Longest to shortest
-- `.natural` - Natural sort (handles numbers properly)
-- `.random` - Random shuffle
-
-#### List Formatting
-- `numberList(_:separator:startIndex:)` - Add numbers to list items
-- `bulletList(_:bullet:separator:)` - Add bullets to list items
-
-#### Processing Options
-- `removeDuplicates` - Remove duplicate items
-- `removeEmpty` - Remove empty items
-- `trimItems` - Trim whitespace from items
-- `caseSensitive` - Use case-sensitive comparisons
-
-### TextTransform
-
-#### Case Styles
-| Style | Example |
-|-------|---------|
-| `.uppercase` | HELLO WORLD |
-| `.lowercase` | hello world |
-| `.capitalized` | Hello World |
-| `.sentence` | Hello world. |
-| `.camelCase` | helloWorld |
-| `.pascalCase` | HelloWorld |
-| `.snakeCase` | hello_world |
-| `.kebabCase` | hello-world |
-| `.constantCase` | HELLO_WORLD |
-| `.dotCase` | hello.world |
-| `.pathCase` | hello/world |
-| `.alternating` | hElLo WoRlD |
-
-### TextUtilities
-
-Static utility methods for text analysis and manipulation:
-- `count(of:in:caseSensitive:)` - Count substring occurrences
-- `extractUniqueWords(from:caseSensitive:)` - Get unique words from text
-- `extractWords(from:caseSensitive:)` - Get all words from text
-- `replaceBetween(in:start:end:with:)` - Replace text between delimiters
-- `wordCount(of:)` - Count words
-- `lineCount(of:)` - Count lines
-- `characterCount(of:)` - Count characters
-- `reverse(_:)` - Reverse text
-- `removeAllWhitespace(from:)` - Remove all whitespace
-- `truncate(_:to:ellipsis:)` - Truncate with ellipsis
-- `wrap(_:width:)` - Wrap text at width
-- `escapeCSV(_:)` - Escape for CSV format
-
-## String Extensions
-
-All major functionality is available as convenient String extensions:
-
-```swift
-// Cleaning
-text.cleaned(options: .standard)
-text.quotesNormalized
-
-// List operations
-text.sortedLines(.natural)
-text.deduplicatedLines()
-text.numberedList()
-text.bulletedList()
-
-// Transformations
-text.transformed(to: .camelCase)
-
-// Text analysis
-text.uniqueWords
-text.words
-
-// Properties
-text.wordCount
-text.lineCount
-text.characterCount
-text.reversed
-text.isNotEmpty
-
-// Methods
-text.truncated(to: 100)
-text.wrapped(at: 80)
-text.csvEscaped
-text.replacingBetween(start: "[", end: "]", with: "content")
-```
-
-## Performance
-
-All operations are optimized for performance:
-- Efficient string processing using Foundation APIs
-- Minimal memory allocations
-- Support for large text processing
-- Thread-safe implementations
-
-## Requirements
-
-- iOS 13.0+ / macOS 10.15+ / tvOS 13.0+ / watchOS 6.0+ / visionOS 1.0+
-- Swift 5.9+
-
-## Contributing
-
-Contributions are welcome! Please:
-1. Fork the repository
-2. Create your feature branch
-3. Add tests for new functionality
-4. Ensure all tests pass
-5. Submit a pull request
+Tests cover cleaning options, list processing and sorting, every case transformation, and the text-analysis and manipulation helpers.
 
 ## License
 
-MIT License - see LICENSE file for details
+MIT License — see LICENSE file for details.
 
 ## Author
 
-Created by David Sherlock
-
-## Acknowledgments
-
-Built with pure Swift and Foundation framework.
+Created by David Sherlock ([ArrayPress](https://github.com/arraypress)) in 2026.
