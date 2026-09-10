@@ -60,4 +60,29 @@ public extension String {
     func replacingBetween(start: String, end: String, with replacement: String) -> String? {
         TextUtilities.replaceBetween(in: self, start: start, end: end, with: replacement)
     }
+
+    /// The string filled to `length` characters on the given side.
+    func padded(toLength length: Int, with pad: Character = " ", side: TextUtilities.PadSide = .trailing) -> String {
+        TextUtilities.pad(self, toLength: length, with: pad, side: side)
+    }
+
+    /// The lines joined with `separator`, empty ones skipped.
+    func joinedLines(with separator: String = " ", skippingEmpty: Bool = true) -> String {
+        TextUtilities.joinLines(self, with: separator, skippingEmpty: skippingEmpty)
+    }
+
+    /// The hashtags, without their `#`, in order.
+    var hashtags: [String] {
+        TextUtilities.hashtags(in: self)
+    }
+
+    /// The mentions, without their `@`, in order.
+    var mentions: [String] {
+        TextUtilities.mentions(in: self)
+    }
+
+    /// Characters, words, sentences, paragraphs, lines and reading time.
+    var statistics: TextStatistics {
+        TextUtilities.statistics(of: self)
+    }
 }

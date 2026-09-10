@@ -37,7 +37,7 @@ Every one of these is a two-line function that people write differently each tim
 ## Installation
 
 ```swift
-.package(url: "https://github.com/arraypress/swift-string-utilities.git", from: "1.1.0")
+.package(url: "https://github.com/arraypress/swift-string-utilities.git", from: "1.2.0")
 ```
 
 Foundation only. No dependencies, every Apple platform, macOS 14+.
@@ -96,6 +96,69 @@ TextUtilities.replaceBetween(in: "Hello [name]!", start: "[", end: "]", with: "W
 TextUtilities.escapeCSV("a,b")                              // "\"a,b\"" — RFC 4180
 ```
 
+## Slugs for URLs
+
+```swift
+TextTransform.slugify("Zürich & Co. — 2026!")                 // "zurich-co-2026"
+TextTransform.slugify("Straße Ærø Łódź")                       // "strasse-aero-lodz"
+TextTransform.slugify("the quick brown fox", maxLength: 11)   // "the-quick" — never mid-word
+TextTransform.slugify("Москва 2026")                          // "2026"
+TextTransform.slugify("Москва 2026", transliterate: true)     // "moskva-2026"
+TextTransform.slugify("東京", allowUnicode: true)              // "東京"
+"Hello, World!".slugified()                                   // "hello-world"
+```
+
+Not kebab-case. Kebab is a case style for identifiers and keeps every letter it is
+given; a slug is what goes after the last `/` in an address, so accents fold to plain
+letters — including the ones Foundation cannot decompose, `ß`, `æ`, `ø`, `ł`, `þ` —
+everything that is not a letter or digit becomes one separator, runs collapse, and
+the ends are trimmed. Other scripts are dropped unless `allowUnicode` keeps them or
+`transliterate` romanises them first.
+
+## Padding and joined lines
+
+```swift
+TextUtilities.pad("7", toLength: 3, with: "0", side: .leading)   // "007"
+TextUtilities.pad("ab", toLength: 6, side: .both)                // "  ab  "
+TextUtilities.pad("hello world", toLength: 5)                    // "hello world" — never truncates
+TextUtilities.joinLines("a\r\nb\n\nc")                          // "a b c"
+TextUtilities.joinLines("a\n\nb", with: "|", skippingEmpty: false) // "a||b"
+```
+
+Padding counts characters, so a flag emoji is one. Joining treats Windows and classic
+Mac line breaks as one break each, and a line of nothing but whitespace as empty.
+
+## Hashtags and mentions
+
+```swift
+TextUtilities.hashtags(in: "Try #swift, #SwiftUI! (#macos)")   // ["swift", "SwiftUI", "macos"]
+TextUtilities.hashtags(in: "#Swift #swift #ios", unique: true) // ["Swift", "ios"]
+TextUtilities.mentions(in: "cc @alice — write to me@example.com") // ["alice"]
+```
+
+A marker counts only at the start of the text or after whitespace, an opening bracket
+or a quote, which is what keeps `a#b`, `site.com/#anchor` and `me@example.com` out.
+The token runs over letters of any script, digits and underscores, so trailing
+punctuation never sticks. A hashtag needs a letter (`#2024` is a number, as the
+networks rule); a mention does not (`@2pac` is a name). `unique` keeps the first
+spelling, compared without case.
+
+## Statistics
+
+```swift
+let stats = TextUtilities.statistics(of: article)
+stats.words                 // 1,204
+stats.sentences             // 58 — "e.g.", "Dr." and "J." do not close one
+stats.paragraphs            // 9, separated by blank lines
+stats.readingTimeText       // "5 min", at 238 words a minute
+```
+
+Characters as a person counts them, characters without whitespace, words, sentences,
+paragraphs, lines, the average word length with punctuation stripped, and the reading
+time at 238 words a minute — the adult silent-reading rate from Brysbaert's 2019
+meta-analysis of 190 studies. Any text at all reads as at least a minute; only empty
+text is `0 min`.
+
 ## JSON as text
 
 ```swift
@@ -116,7 +179,7 @@ Everything above is also a method or property on `String`: `.cleaned()`, `.quote
 
 ## Tested
 
-155 tests. Every public function at its edges — empty and whitespace-only text, combining marks, flag emoji, Windows line breaks, non-breaking spaces, a megabyte of input — plus every cleaning option alone and combined, every sort order, every case style round-tripped, truncation at zero and at the exact length, wrapping at width one, and for JSON: bare scalars, nested empty containers, escaped and raw unicode, `1.0`, `1e10` and `-0`, duplicate keys, trailing commas, sorted keys at every level, idempotence, and a 1.3 MB document.
+201 tests. Every public function at its edges — empty and whitespace-only text, combining marks, flag emoji, Windows line breaks, non-breaking spaces, a megabyte of input — plus every cleaning option alone and combined, every sort order, every case style round-tripped, truncation at zero and at the exact length, wrapping at width one, and for JSON: bare scalars, nested empty containers, escaped and raw unicode, `1.0`, `1e10` and `-0`, duplicate keys, trailing commas, sorted keys at every level, idempotence, and a 1.3 MB document; and for the text tools: every letter Foundation cannot fold, Cyrillic dropped, kept and romanised, a cut on a word boundary, padding by character, every line-break style, the boundary rules that keep an email out of the mentions, abbreviations and initials that do not end a sentence, and reading time at its edges.
 
 ## Licence
 

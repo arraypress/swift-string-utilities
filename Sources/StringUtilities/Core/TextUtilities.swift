@@ -97,6 +97,70 @@ public struct TextUtilities {
         TextEditing.wrap(text, width: width)
     }
 
+    /// Fills the text to `length` characters with `pad` on the given side.
+    /// Text already that long is returned unchanged; this never truncates.
+    ///
+    /// - Parameters:
+    ///   - text: The text to fill out.
+    ///   - length: The length to reach, in characters.
+    ///   - pad: The character to fill with. A space by default.
+    ///   - side: Where the padding goes. After the text by default.
+    public static func pad(
+        _ text: String, toLength length: Int, with pad: Character = " ", side: PadSide = .trailing
+    ) -> String {
+        TextEditing.pad(text, toLength: length, with: pad, side: side)
+    }
+
+    /// The lines of the text joined with `separator`, empty lines skipped
+    /// unless asked otherwise. Windows and classic Mac line breaks count as
+    /// one break each.
+    public static func joinLines(_ text: String, with separator: String = " ", skippingEmpty: Bool = true) -> String {
+        TextEditing.joinLines(text, with: separator, skippingEmpty: skippingEmpty)
+    }
+
+    // MARK: Social tokens
+
+    /// The hashtags in the text, without their `#`, in order of appearance.
+    ///
+    /// A tag starts at the beginning, after whitespace, or after an opening
+    /// bracket or quote — so `a#b` and the `#` in `site.com/#anchor` are not
+    /// tags — and runs over letters of any script, digits and underscores,
+    /// which is why trailing punctuation never sticks to it. It needs at
+    /// least one letter, as the networks rule, so `#2024` is a number.
+    /// `unique` keeps the first spelling of each tag, compared without case.
+    public static func hashtags(in text: String, unique: Bool = false) -> [String] {
+        SocialTokens.tokens(in: text, marker: "#", requireLetter: true, unique: unique)
+    }
+
+    /// The mentions in the text, without their `@`, in order of appearance.
+    ///
+    /// The same boundary rule as ``hashtags(in:unique:)``, which is what keeps
+    /// `me@example.com` from counting as a mention of `example`. Digits alone
+    /// are allowed, because `@2pac` is a name.
+    public static func mentions(in text: String, unique: Bool = false) -> [String] {
+        SocialTokens.tokens(in: text, marker: "@", requireLetter: false, unique: unique)
+    }
+
+    // MARK: Statistics
+
+    /// What a statistics panel shows: characters, words, sentences,
+    /// paragraphs, lines, the average word length, and the reading time at
+    /// the adult silent-reading rate of 238 words a minute.
+    public static func statistics(of text: String) -> TextStatistics {
+        let words = Readability.words(in: text)
+        return TextStatistics(
+            characters: text.count,
+            charactersExcludingWhitespace: TextEditing.removeAllWhitespace(from: text).count,
+            words: words.count,
+            sentences: Readability.sentenceCount(of: text),
+            paragraphs: Readability.paragraphCount(of: text),
+            lines: Readability.lineCount(of: text),
+            averageWordLength: Readability.averageWordLength(of: words),
+            readingTimeSeconds: Readability.readingTimeSeconds(words: words.count),
+            readingTimeText: Readability.readingTimeText(words: words.count)
+        )
+    }
+
     // MARK: Escaping
 
     /// Quotes the text for a CSV field when it needs it — when it holds a

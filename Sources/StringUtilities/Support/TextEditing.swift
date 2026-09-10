@@ -63,4 +63,31 @@ enum TextEditing {
         }
         return result
     }
+
+    /// Fills to `length` characters with `pad`, by Character so a flag emoji
+    /// counts as one. Text already that long is returned unchanged — this
+    /// never truncates, because the caller asked for a minimum, not a cut.
+    static func pad(_ text: String, toLength length: Int, with pad: Character, side: TextUtilities.PadSide) -> String {
+        let missing = length - text.count
+        guard missing > 0 else { return text }
+        switch side {
+        case .leading:
+            return String(repeating: pad, count: missing) + text
+        case .trailing:
+            return text + String(repeating: pad, count: missing)
+        case .both:
+            let leading = missing / 2
+            return String(repeating: pad, count: leading) + text + String(repeating: pad, count: missing - leading)
+        }
+    }
+
+    /// The lines joined with `separator`. Every kind of line break is one
+    /// break, and a line with nothing but whitespace is empty for the purpose
+    /// of `skippingEmpty`.
+    static func joinLines(_ text: String, with separator: String, skippingEmpty: Bool) -> String {
+        let normalised = text.replacingOccurrences(of: "\r\n", with: "\n").replacingOccurrences(of: "\r", with: "\n")
+        let lines = normalised.components(separatedBy: "\n")
+        let kept = skippingEmpty ? lines.filter { !$0.trimmingCharacters(in: .whitespaces).isEmpty } : lines
+        return kept.joined(separator: separator)
+    }
 }
