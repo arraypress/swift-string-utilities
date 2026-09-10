@@ -1,34 +1,17 @@
-// swift-tools-version: 5.9
-// The swift-tools-version declares the minimum version of Swift required to build this package.
+// swift-tools-version: 6.0
 
 import PackageDescription
 
 let package = Package(
     name: "StringUtilities",
     platforms: [
-        .iOS(.v13),
-        .macOS(.v10_15),
-        .tvOS(.v13),
-        .watchOS(.v6),
-        .visionOS(.v1)
+        .macOS(.v14), .iOS(.v16), .tvOS(.v16), .watchOS(.v9), .visionOS(.v1),
     ],
     products: [
-        // Products define the executables and libraries a package produces, making them visible to other packages.
-        .library(
-            name: "StringUtilities",
-            targets: ["StringUtilities"]),
+        .library(name: "StringUtilities", targets: ["StringUtilities"]),
     ],
     targets: [
-        // Targets are the basic building blocks of a package, defining a module or a test suite.
-        // Targets can depend on other targets in this package and products from dependencies.
-        .target(
-            name: "StringUtilities",
-            path: "Sources"
-        ),
-        .testTarget(
-            name: "StringUtilitiesTests",
-            dependencies: ["StringUtilities"],
-            path: "Tests"
-        ),
+        .target(name: "StringUtilities"),
+        .testTarget(name: "StringUtilitiesTests", dependencies: ["StringUtilities"]),
     ]
 )
